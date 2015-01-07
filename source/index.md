@@ -113,6 +113,8 @@ When a request fails because of a bad request, a generic message describing the 
 
 # Authentication
 
+> Example Request
+
 ```shell
 $ curl -vX GET "https://api.switchpayments.com/v1/customers" -u "username:password"
 ```
@@ -181,14 +183,25 @@ refunds        | array    | Refunds made for this payment.
 
 ### HTTP Request
 
+> Example Request
+
+```shell
+$ curl -vX POST "https://api.switchpayments.com/v1/payments" \
+       -u "username:password" \
+       -d '{"amount": 42, "currency": "EUR", "card": "8135032a4dc488116a25dcca63b251af727dcca6549ee2a2"}'
+```
+
 `POST https://api.switchpayments.com/v1/payments`
 
 ### Request Parameters
 
-Parameter | Required | Description
---------- | -------- | -----------
-card      | no       | The ID of an existing card or a [dictionary](#create-a-new-card) containing a credit card's details.
-customer  | no       | The ID of an existing customer whose default card will be used in this request.
+Parameter   | Required | Description
+----------- | -------- | -----------
+amount      | yes      | A positive integer in the smallest currency unit.
+currency    | yes      | Three-letter ISO currency code representing the currency in which the payment should be made.
+description | no       | A description of the payment.
+card        | no       | The ID of an existing card or a [dictionary](#create-a-new-card) containing a credit card's details.
+customer    | no       | The ID of an existing customer whose default card will be used in this request.
 
 <aside class="notice">
 Either a customer or a card must be provided.
@@ -203,6 +216,14 @@ If the request succeeded, then `HTTP 201` is returned, meaning that the payment 
 This is the step that indeed requests that the given payment is authorized to be captured.
 
 ### HTTP Request
+
+> Example Request
+
+```shell
+$ curl -vX POST "https://api.switchpayments.com/v1/payments/cd501d5d9a68fea10f2926562c0593c24634d68854ad4e64/authorize" \
+       -u "username:password" \
+       -d '{}'
+```
 
 `POST https://api.switchpayments.com/v1/payments/{id}/authorize`
 
@@ -219,6 +240,14 @@ Don't forget to either capture or void an authorization.
 You can only capture a payment that has an _active_ authorization.
 
 ### HTTP Request
+
+> Example Request
+
+```shell
+$ curl -vX POST "https://api.switchpayments.com/v1/payments/cd501d5d9a68fea10f2926562c0593c24634d68854ad4e64/capture" \
+       -u "username:password" \
+       -d '{"amount": 40}'
+```
 
 `POST https://api.switchpayments.com/v1/payments/{id}/capture`
 
@@ -238,6 +267,14 @@ You can only void a payment that has an _active_ authorization.
 
 ### HTTP Request
 
+> Example Request
+
+```shell
+$ curl -vX POST "https://api.switchpayments.com/v1/payments/cd501d5d9a68fea10f2926562c0593c24634d68854ad4e64/void" \
+       -u "username:password" \
+       -d '{}'
+```
+
 `POST https://api.switchpayments.com/v1/payments/{id}/void`
 
 ### Returns
@@ -249,6 +286,14 @@ If the request succeeded, then `HTTP 201` is returned. If something goes wrong, 
 You can only make refunds of a payment that has been _captured_ and until the total refund value amounts to the payment's total value.
 
 ### HTTP Request
+
+> Example Request
+
+```shell
+$ curl -vX POST "https://api.switchpayments.com/v1/payments/cd501d5d9a68fea10f2926562c0593c24634d68854ad4e64/refund" \
+       -u "username:password" \
+       -d '{"amount": 40, "description": "Client did not like the product"}'
+```
 
 `POST https://api.switchpayments.com/v1/payments/{id}/refund`
 
@@ -266,6 +311,13 @@ If the request succeeded, then `HTTP 201` is returned. If something goes wrong, 
 ## List all payments
 
 ### HTTP Request
+
+> Example Request
+
+```shell
+$ curl -vX GET "https://api.switchpayments.com/v1/payments" \
+       -u "username:password"
+```
 
 `GET https://api.switchpayments.com/v1/payments`
 
@@ -305,6 +357,14 @@ status           | string   | Status of the card ("ok" means it is ready to be u
 
 ### HTTP Request
 
+> Example Request
+
+```shell
+$ curl -vX POST "https://api.switchpayments.com/v1/cards" \
+       -u "username:password" \
+       -d '{"card": "4360eeff94bda5bf0040cd9b907cbadc1008e36154ad319f"}'
+```
+
 `POST https://api.switchpayments.com/v1/cards`
 
 ### Request Parameters
@@ -332,6 +392,14 @@ If the request succeeded, then `HTTP 201` is returned, meaning that the card was
 
 ### HTTP Request
 
+> Example Request
+
+```shell
+$ curl -vX PUT "https://api.switchpayments.com/v1/cards/8135032a4dc488116a25dcca63b251af727dcca6549ee2a2" \
+       -u "username:password" \
+       -d '{"customer_id": "ef40a7a20144b23b3b82a82f86e3005e0fb6e07654ad265e"}'
+```
+
 `PUT https://api.switchpayments.com/v1/cards/{id}`
 
 ### Request Parameters
@@ -347,6 +415,13 @@ If the request succeeded, then `HTTP 200` is returned. If something goes wrong, 
 ## List all cards
 
 ### HTTP Request
+
+> Example Request
+
+```shell
+$ curl -vX GET "https://api.switchpayments.com/v1/cards" \
+       -u "username:password"
+```
 
 `GET https://api.switchpayments.com/v1/cards`
 
@@ -386,6 +461,14 @@ cards            | object   | A dictionary with a detailed summary regarding cus
 
 ### HTTP Request
 
+> Example Request
+
+```shell
+$ curl -vX POST "https://api.switchpayments.com/v1/customers" \
+       -u "username:password" \
+       -d '{"email": "john@example.com", "name": "John Doe", "description": "The best client in the world!"}'
+```
+
 `POST https://api.switchpayments.com/v1/customers`
 
 ### Request Parameters
@@ -410,6 +493,14 @@ If the request succeeded, then `HTTP 201` is returned, meaning that the card was
 
 ### HTTP Request
 
+> Example Request
+
+```shell
+$ curl -vX PUT "https://api.switchpayments.com/v1/customers/ef40a7a20144b23b3b82a82f86e3005e0fb6e07654ad265e" \
+       -u "username:password" \
+       -d '{"default_card": "8135032a4dc488116a25dcca63b251af727dcca6549ee2a2"}'
+```
+
 `PUT https://api.switchpayments.com/v1/customers/{id}`
 
 ### Request Parameters
@@ -428,6 +519,13 @@ If the request succeeded, then `HTTP 200` is returned. If something goes wrong, 
 ## List a customer's cards
 
 ### HTTP Request
+
+> Example Request
+
+```shell
+$ curl -vX GET "https://api.switchpayments.com/v1/customers/ef40a7a20144b23b3b82a82f86e3005e0fb6e07654ad265e/cards" \
+       -u "username:password"
+```
 
 `GET https://api.switchpayments.com/v1/customers/{id}/cards`
 
@@ -452,6 +550,14 @@ value            | string   | The token itself, that should be provided in any r
 ## Create a new token
 
 ### HTTP Request
+
+> Example Request
+
+```shell
+$ curl -vX POST "https://api.switchpayments.com/v1/tokens" \
+       -u "username:password" \
+       -d '{"type": "card"}'
+```
 
 `POST https://api.switchpayments.com/v1/tokens`
 
