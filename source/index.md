@@ -384,12 +384,95 @@ cards            | object   | A dictionary with a detailed summary regarding cus
 
 ## Create a new customer
 
+### HTTP Request
+
+`POST https://api.switchpayments.com/v1/customers`
+
+### Request Parameters
+
+Parameter   | Required | Description
+----------- | -------- | -----------
+email       | yes      | The customer's email address.
+name        | no       | The customer's full name.
+description | no       | A description of the customer.
+card        | no       | The ID of an existing card (that cannot belong to a customer already) or a [dictionary](#create-a-new-card) containing a credit card's details. This will be set as the user's default card.
+token       | no       | A card [token](#tokens). This will be set as the user's default card.
+
+<aside class="notice">
+Regarding the default card, either a card OR token should be provided and not both.
+</aside>
+
+### Returns
+
+If the request succeeded, then `HTTP 201` is returned, meaning that the card was created, with the respective [object](#customers). If something goes wrong, an [error](#errors) is returned.
+
 ## Update a customer
+
+### HTTP Request
+
+`PUT https://api.switchpayments.com/v1/customers/{id}`
+
+### Request Parameters
+
+Parameter    | Required | Description
+------------ | -------- | -----------
+email        | yes      | The customer's email address.
+name         | no       | The customer's full name.
+description  | no       | A description of the customer.
+default_card | no       | The ID of an existing [card](#cards) (should either don't have a customer of belong to the given customer) that will be set as the customer's default card.
+
+### Returns
+
+If the request succeeded, then `HTTP 200` is returned. If something goes wrong, an [error](#errors) is returned.
 
 ## List a customer's cards
 
-## Update a customer's card
+### HTTP Request
+
+`GET https://api.switchpayments.com/v1/customers/{id}/cards`
 
 # Tokens
 
+### The token object
+
+> Example Object
+
+```json
+{
+    "type": "card",
+    "value": "4360eeff94bda5bf0040cd9b907cbadc1008e36154ad319f"
+}
+```
+
+Attribute        | Type     | Description
+---------------- | -------- | -----------
+type             | string   | The type of token.
+value            | string   | The token itself, that should be provided in any request that requires a token.
+
 ## Create a new token
+
+### HTTP Request
+
+`POST https://api.switchpayments.com/v1/tokens`
+
+### Request Parameters
+
+Parameter   | Required | Description
+----------- | -------- | -----------
+type        | yes      | The type of token (possible values: "card")
+
+### Credit Card Details
+
+If the token is of the **card** type, additional parameters must be provided with the request.
+
+Parameter        | Required | Description
+---------------- | -------- | -----------
+number           | yes      | The card's number.
+expiration_month | yes      | The card's expiration month.
+expiration_year  | yes      | The card's expiration year.
+cvc              | yes      | The card's security code.
+name             | yes      | The cardholder name.
+
+### Returns
+
+If the request succeeded, then `HTTP 201` is returned, meaning that the card was created, with the respective [object](#tokens). If something goes wrong, an [error](#errors) is returned.
