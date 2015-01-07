@@ -187,7 +187,7 @@ refunds        | array    | Refunds made for this payment.
 
 Parameter | Required | Description
 --------- | -------- | -----------
-card      | no       | The ID of an existing card or a dictionary containing a credit card's details.
+card      | no       | The ID of an existing card or a [dictionary](#create-a-new-card) containing a credit card's details.
 customer  | no       | The ID of an existing customer whose default card will be used in this request.
 
 <aside class="notice">
@@ -196,7 +196,7 @@ Either a customer or a card must be provided.
 
 ### Returns
 
-If the request succeeded, then `HTTP 201` is returned, meaning that the payment was created, with the respective object. If something goes wrong, an [error](#errors) is returned.
+If the request succeeded, then `HTTP 201` is returned, meaning that the payment was created, with the respective [object](#payments). If something goes wrong, an [error](#errors) is returned.
 
 ## Authorize a payment
 
@@ -210,7 +210,7 @@ This is the step that indeed requests that the given payment is authorized to be
 
 If the request succeeded, then `HTTP 201` is returned. If something goes wrong, an [error](#errors) is returned.
 
-<aside class="notice">
+<aside class="warning">
 Don't forget to either capture or void an authorization.
 </aside>
 
@@ -246,7 +246,7 @@ If the request succeeded, then `HTTP 201` is returned. If something goes wrong, 
 
 ## Refund a payment
 
-You can only make refunds of a payment that has been **captured** and until the total refund value amounts to the payment's total value.
+You can only make refunds of a payment that has been _captured_ and until the total refund value amounts to the payment's total value.
 
 ### HTTP Request
 
@@ -271,11 +271,116 @@ If the request succeeded, then `HTTP 201` is returned. If something goes wrong, 
 
 # Cards
 
+### The card object
+
+> Example Object
+
+```json
+{
+    "id": "8135032a4dc488116a25dcca63b251af727dcca6549ee2a2",
+    "expiration_month": 12,
+    "created_at": "2014-12-27 16:47:30",
+    "funding": "credit",
+    "name": "John Doe",
+    "expiration_year": 2042,
+    "brand": "visa",
+    "status": "ok",
+    "last_4_digits": "0022"
+}
+```
+
+Attribute        | Type     | Description
+---------------- | -------- | -----------
+id               | string   | Unique identifier of the card.
+brand            | string   | Card brand.
+funding          | string   | Card funding type.
+last_4_digits    | string   | Last four digits of the card number.
+name             | string   | Cardholder name.
+expiration_month | int      | Card expiration month.
+expiration_year  | int      | Card expiration year.
+created_at       | string   | Date and time of the creation of the card.
+status           | string   | Status of the card ("ok" means it is ready to be used).
+
 ## Create a new card
+
+### HTTP Request
+
+`POST https://api.switchpayments.com/v1/cards`
+
+### Request Parameters
+
+Parameter | Required | Description
+--------- | -------- | -----------
+card      | yes      | Can be a [token](#create-a-new-token) or a dictionary containing a credit card's details (see bellow).
+
+### Credit Card Details
+
+Parameter        | Required | Description
+---------------- | -------- | -----------
+number           | yes      | The card's number.
+expiration_month | yes      | The card's expiration month.
+expiration_year  | yes      | The card's expiration year.
+cvc              | yes      | The card's security code.
+name             | yes      | The cardholder name.
+customer_id      | no       | The ID of an existing [customer](#customers). If this value is provided, the card's owner will be the given customer.
+
+### Returns
+
+If the request succeeded, then `HTTP 201` is returned, meaning that the card was created, with the respective [object](#cards). If something goes wrong, an [error](#errors) is returned.
 
 ## Update a card
 
+### HTTP Request
+
+`PUT https://api.switchpayments.com/v1/cards/{id}`
+
+### Request Parameters
+
+Parameter   | Required | Description
+----------- | -------- | -----------
+customer_id | yes      | The ID of an existing [customer](#customers). If this value is provided, the card's owner will be the given customer. If the value is empty, then the card will have no customer associated with it.
+
+### Returns
+
+If the request succeeded, then `HTTP 200` is returned. If something goes wrong, an [error](#errors) is returned.
+
+## List all cards
+
+### HTTP Request
+
+`GET https://api.switchpayments.com/v1/cards`
+
 # Customers
+
+### The customer object
+
+> Example Object
+
+```json
+{
+    "id": "ef40a7a20144b23b3b82a82f86e3005e0fb6e07654ad265e",
+    "description": "The best client in the world!",
+    "created_at": "2015-01-07 12:28:14",
+    "updated_at": "2015-01-07 12:28:14",
+    "email": "john@example.com",
+    "cards": {
+        "url": "/v1/customers/ef40a7a20144b23b3b82a82f86e3005e0fb6e07654ad265e/cards",
+        "total_items": 0,
+        "default": null
+    },
+    "name": "John Doe"
+}
+```
+
+Attribute        | Type     | Description
+---------------- | -------- | -----------
+id               | string   | Unique identifier of the customer.
+email            | string   | The customer's email address.
+name             | string   | The customer's full name.
+description      | string   | A description about the customer.
+created_at       | string   | Date and time of the creation of the customer.
+updated_at       | string   | Date and time of the last update to the customer's details.
+cards            | object   | A dictionary with a detailed summary regarding customer's cards (e.g. total cards, default card) and the URL to the respective resource collection.
 
 ## Create a new customer
 
