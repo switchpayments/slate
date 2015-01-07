@@ -1,5 +1,5 @@
 ---
-title: API Reference
+title: Switch API Reference
 
 language_tabs:
   - shell
