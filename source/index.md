@@ -555,7 +555,6 @@ value            | string   | The token itself, that should be provided in any r
 
 ```shell
 $ curl -vX POST "https://api.switchpayments.com/v1/tokens" \
-       -u "username:password" \
        -d '{"type": "card"}'
 ```
 
