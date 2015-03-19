@@ -218,6 +218,10 @@ description         | string   | no       | A description of the payment.
 
 If the request succeeded, then `HTTP 201` is returned, meaning that the payment was created, with the respective [object](#payments). If something goes wrong, an [error](#errors) is returned.
 
+<aside class="warning">
+Payments created with 'capture_on_creation' as false will request an Authorization. Authorized payments should be captured or voided in 7 days.
+</aside>
+
 ## Capture a payment
 
 You can only capture a payment that has an _active_ authorization.
@@ -244,6 +248,10 @@ amount    | yes      | The amount to be captured (must be equal or less of the p
 
 If the request succeeded, then `HTTP 201` is returned. If something goes wrong, an [error](#errors) is returned.
 
+<aside class="notice">
+Captured is only possible on Authorized Payments (i.e. payments with the 'capture_on_creation' flag set as false).
+</aside>
+
 ## Void a payment
 
 You can only void a payment that has an _active_ authorization.
@@ -263,6 +271,10 @@ $ curl -vX POST "https://api.switchpayments.com/v1/payments/cd501d5d9a68fea10f29
 ### Returns
 
 If the request succeeded, then `HTTP 201` is returned. If something goes wrong, an [error](#errors) is returned.
+
+<aside class="notice">
+Void is only possible on Authorized Payments (i.e. payments with the 'capture_on_creation' flag set as false).
+</aside>
 
 ## Refund a payment
 
@@ -313,14 +325,14 @@ $ curl -vX GET "https://api.switchpayments.com/v1/payments" \
 ```json
 {
     "id": "8135032a4dc488116a25dcca63b251af727dcca6549ee2a2",
-    "expiration_month": 12,
-    "created_at": "2014-12-27 16:47:30",
-    "funding": "credit",
-    "name": "John Doe",
-    "expiration_year": 2042,
     "brand": "visa",
-    "status": "ok",
-    "last_4_digits": "0022"
+    "country": "portugal",
+    "created_at": "2014-12-27 16:47:30",
+    "expiration_month": 12,
+    "expiration_year": 2042,
+    "funding": "credit",
+    "last_4_digits": "0022",
+    "name": "John Doe"
 }
 ```
 
@@ -328,13 +340,13 @@ Attribute        | Type     | Description
 ---------------- | -------- | -----------
 id               | string   | Unique identifier of the card.
 brand            | string   | Card brand.
+country          | string   | The country the user was when this card was created.
+created_at       | string   | Date and time of the creation of the card.
+expiration_month | int      | Card expiration month.
+expiration_year  | int      | Card expiration year.
 funding          | string   | Card funding type.
 last_4_digits    | string   | Last four digits of the card number.
 name             | string   | Cardholder name.
-expiration_month | int      | Card expiration month.
-expiration_year  | int      | Card expiration year.
-created_at       | string   | Date and time of the creation of the card.
-status           | string   | Status of the card ("ok" means it is ready to be used).
 
 ## Create a new card
 
@@ -360,12 +372,13 @@ card      | yes      | Can be a [token](#create-a-new-token) or a dictionary con
 
 Parameter        | Required | Description
 ---------------- | -------- | -----------
-number           | yes      | The card's number.
+country          | yes      | The country where the user was when the card was created.
+customer_id      | no       | The ID of an existing [customer](#customers). If this value is provided, the card's owner will be the given customer.
+cvc              | yes      | The card's security code.
 expiration_month | yes      | The card's expiration month.
 expiration_year  | yes      | The card's expiration year.
-cvc              | yes      | The card's security code.
 name             | yes      | The cardholder name.
-customer_id      | no       | The ID of an existing [customer](#customers). If this value is provided, the card's owner will be the given customer.
+number           | yes      | The card's number.
 
 ### Returns
 
@@ -461,12 +474,6 @@ Parameter   | Required | Description
 email       | yes      | The customer's email address.
 name        | no       | The customer's full name.
 description | no       | A description of the customer.
-card        | no       | The ID of an existing card (that cannot belong to a customer already) or a [dictionary](#create-a-new-card) containing a credit card's details. This will be set as the user's default card.
-token       | no       | A card [token](#tokens). This will be set as the user's default card.
-
-<aside class="notice">
-Regarding the default card, either a card OR token should be provided and not both.
-</aside>
 
 ### Returns
 
@@ -555,11 +562,12 @@ If the token is of the **card** type, additional parameters must be provided wit
 
 Parameter        | Required | Description
 ---------------- | -------- | -----------
-number           | yes      | The card's number.
+country          | yes      | The country where the user was when the token was requested.
+cvc              | yes      | The card's security code.
 expiration_month | yes      | The card's expiration month.
 expiration_year  | yes      | The card's expiration year.
-cvc              | yes      | The card's security code.
 name             | yes      | The cardholder name.
+number           | yes      | The card's number.
 
 ### Returns
 
