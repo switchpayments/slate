@@ -3,8 +3,6 @@ title: Switch API Reference
 
 language_tabs:
   - shell
-  - javascript
-  - python
 
 toc_footers:
   - <a href='http://github.com/tripit/slate'>Documentation Powered by Slate</a>
@@ -138,46 +136,59 @@ Your credentials should NEVER be shared as they unlock sensitive resources, such
 ```json
 {
     "id": "5affd688507a7ed35fac7c324862fdcc7d55099e549ee32f",
-    "currency": "EUR",
     "amount": 100,
-    "authorizations": [
-        {
-            "status": "active",
-            "authorized_at": "2014-12-27 16:50:23"
-        }
+    "amount_captured": 80,
+    "amount_refunded": 0,
+    "capture_on_creation": false,
+    "captured": true,
+    "captures": [
+      {
+        "amount": 80,
+        "created_at": "2014-12-28 15:14:13",
+        "success": false
+      },
+      {
+        "amount": 80,
+        "created_at": "2014-12-28 15:14:15",
+        "success": true
+      }
     ],
-    "description": "",
-    "captured": false,
-    "refunded": false,
-    "created_at": "2014-12-27 16:49:51",
     "card": {
-        "id": "8135032a4dc488116a25dcca63b251af727dcca6549ee2a2",
-        "expiration_month": 12,
-        "created_at": "2014-12-27 16:47:30",
-        "funding": "credit",
+        "cvc": "007",
+        "expiration_month": 3,
+        "expiration_year": 2016,
         "name": "John Doe",
-        "expiration_year": 2042,
-        "brand": "visa",
-        "status": "ok",
-        "last_4_digits": "0022"
+        "number": "1111222233334444"
     },
-    "updated_at": "2014-12-27 16:49:51"
+    "created_at": "2014-12-27 16:49:51",
+    "currency": "EUR",
+    "description": "",
+    "refunds": [],
+    "success": true,
+    "updated_at": "2014-12-27 16:49:51",
+    "voided": false,
+    "voids": []
 }
 ```
 
-Attribute      | Type     | Description
--------------- | -------- | -----------
-id             | string   | Unique identifier of the payment.
-card           | object   | Details of the card used to make the payment.
-amount         | int      | Payment amount.
-currency       | string   | Currency in which the payment was made.
-description    | string   | Description of the payment.
-created_at     | string   | Date and time of the creation of the payment.
-updated_at     | string   | Date and time of the last time an update was made to the payment.
-captured       | boolean  | Whether or not the payment was captured.
-authorizations | array    | Authorizations requested for this payment.
-refunded       | boolean  | Whether any refunds were made for this payment.
-refunds        | array    | Refunds made for this payment.
+Attribute           | Type     | Description
+------------------- | -------- | -----------
+id                  | string   | Unique identifier of the payment.
+amount              | float    | Requested payment amount.
+amount_captured     | float    | Amount captured.
+amount_refunded     | float    | Amount refunded.
+capture_on_creation | boolean  | If 'false', then payment will be an authorization that will have to be either captured or voided.
+captured            | boolean  | Whether or not the payment was captured.
+captures            | array    | Capture requests for given payment.
+card                | object   | If 'capture_on_creation' is 'true', then this must be a valid Card ID string. If not, then payment is an authorization and the card's details, including CVC, are required and a dict containg them is expected.
+created_at          | string   | Date and time of the creation of the payment.
+currency            | string   | Currency in which the payment was made.
+description         | string   | Description of the payment.
+refunds             | array    | Refunds made for this payment.
+success             | boolean  | Whether or not the payment (either process payment or authorization) were successful.
+updated_at          | string   | Date and time of the last time an update was made to the payment.
+voided              | boolean  | In the case of payment being an Authorization, whether or not it was voided.
+voids               | array    | Voids requested for this payment.
 
 ## Create a new payment
 
@@ -210,30 +221,6 @@ Either a customer or a card must be provided.
 ### Returns
 
 If the request succeeded, then `HTTP 201` is returned, meaning that the payment was created, with the respective [object](#payments). If something goes wrong, an [error](#errors) is returned.
-
-## Authorize a payment
-
-This is the step that indeed requests that the given payment is authorized to be captured.
-
-### HTTP Request
-
-> Example Request
-
-```shell
-$ curl -vX POST "https://api.switchpayments.com/v1/payments/cd501d5d9a68fea10f2926562c0593c24634d68854ad4e64/authorize" \
-       -u "username:password" \
-       -d '{}'
-```
-
-`POST https://api.switchpayments.com/v1/payments/{id}/authorize`
-
-### Returns
-
-If the request succeeded, then `HTTP 201` is returned. If something goes wrong, an [error](#errors) is returned.
-
-<aside class="warning">
-Don't forget to either capture or void an authorization.
-</aside>
 
 ## Capture a payment
 
