@@ -199,24 +199,20 @@ voids               | array    | Voids requested for this payment.
 ```shell
 $ curl -vX POST "https://api.switchpayments.com/v1/payments" \
        -u "username:password" \
-       -d '{"amount": 42, "currency": "EUR", "card": "8135032a4dc488116a25dcca63b251af727dcca6549ee2a2"}'
+       -d '{"amount": 42, "capture_on_creation": true, "currency": "EUR", "card": "8135032a4dc488116a25dcca63b251af727dcca6549ee2a2"}'
 ```
 
 `POST https://api.switchpayments.com/v1/payments`
 
 ### Request Parameters
 
-Parameter   | Required | Description
------------ | -------- | -----------
-amount      | yes      | A positive integer in the smallest currency unit.
-currency    | yes      | Three-letter ISO currency code representing the currency in which the payment should be made.
-description | no       | A description of the payment.
-card        | no       | The ID of an existing card or a [dictionary](#create-a-new-card) containing a credit card's details.
-customer    | no       | The ID of an existing customer whose default card will be used in this request.
-
-<aside class="notice">
-Either a customer or a card must be provided.
-</aside>
+Parameter           | Type     | Required | Description
+------------------- | -------- | -------- | -----------
+amount              | float    | yes      | A positive integer in the smallest currency unit.
+capture_on_creation | boolean  | yes      | If 'true' then payment is immediately captured and if 'false' then an Authorization is requested. 
+card                |          | no       | Either the ID of an existing card or a [dictionary](#create-a-new-card) containing a credit card's details, depending on 'capture_on_creation' being 'true' and 'false', respectively.
+currency            | string   | yes      | Three-letter ISO currency code representing the currency in which the payment should be made.
+description         | string   | no       | A description of the payment.
 
 ### Returns
 
