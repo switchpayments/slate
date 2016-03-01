@@ -12,13 +12,13 @@ search: true
 
 # Introduction
 
-Welcome to the Switch API documentation. 
+Welcome to the Switch API documentation.
 
 The API follows a [REST](http://en.wikipedia.org/wiki/Representational_state_transfer) architecture, where endpoints are built around the concept of resources, actions are represented by the respective HTTP verb and response status are represented using HTTP status codes.
 
 ```
 API Endpoint
-https://api.switchpayments.com/v1
+https://api.switchpayments.com/v2
 
 ```
 
@@ -30,19 +30,22 @@ All requests must be made over HTTPS.
 
 ```json
 {
-    "url": "https://api.switchpayments.com/v1",
+    "url": "https://api.switchpayments.com/v2",
     "resources": {
-        "cards": {
-            "url": "https://api.switchpayments.com/v1/cards"
+        "charges": {
+            "url": "https://api.switchpayments.com/v2/charges"
         },
-        "tokens": {
-            "url": "https://api.switchpayments.com/v1/tokens"
+        "instruments": {
+            "url": "https://api.switchpayments.com/v2/instruments"
         },
         "customers": {
-            "url": "https://api.switchpayments.com/v1/customers"
+            "url": "https://api.switchpayments.com/v2/customers"
+        },
+        "events": {
+            "url": "https://api.switchpayments.com/v2/events"
         },
         "payments": {
-            "url": "https://api.switchpayments.com/v1/payments"
+            "url": "https://api.switchpayments.com/v2/payments"
         }
     }
 }
@@ -93,7 +96,7 @@ Error Code | Description  | Meaning
 404        | Not Found    | The requested item doesn't exist.
 500        | Server Error | Something unexpected happened on the server side.
 
-### Bad Request 
+### Bad Request
 
 > Bad Request Response
 
@@ -114,18 +117,284 @@ When a request fails because of a bad request, a generic message describing the 
 > Example Request
 
 ```shell
-$ curl -vX GET "https://api.switchpayments.com/v1/customers" -u "username:password"
+$ curl -vX GET "https://api.switchpayments.com/v2/customers" -u "username:password"
 ```
 
 All the API endpoints require authentication and the respective credentials should be provided via [HTTP Basic Auth](http://en.wikipedia.org/wiki/Basic_access_authentication):
 
 `Authorization: Basic {credentials}`
 
-You must replace {credentials} with the base64 encoded string in the form of "username:password", where username is your _Account ID_ and password your _Private Key_.
+You must replace {credentials} with the base64 encoded string in the form of "username:password"
+
+### Public Credentials
+
+Resources that require the Merchant's public credentials for authentication, username is _Account ID_ and password is blank.
+
+### Private Credentials
+
+Resources that required the Merchant's private credentials for authentication, username is your _Account ID_ and password your _Private Key_.
 
 <aside class="notice">
-Your credentials should NEVER be shared as they unlock sensitive resources, such as payments.
+Your private credentials should NEVER be shared as they unlock sensitive resources, such as payments.
 </aside>
+
+# Charges
+
+### The charge object
+
+> Example Object
+
+```json
+{
+  "id": "06d7c2e4145f3be209e9ab5c6ed24da8b786f65256d462a5",
+  "charge_type": "multibanco",
+  "confirmed": true,
+  "amount": 23,
+  "currency": "EUR",
+  "events_url": "https://localhost:8005/my-events-url",
+  "metadata": {
+    "user": 42
+  },
+  "instruments": [{
+    "id": "8fa25ce7f0d4f74cab86d23bfe1350ce2bac2bc556d462aa",
+    "success": true,
+      "last_payment": {
+        "id": "69c2a925a7a7d5d4d10e333b4d34442053b5d7c756d462bf",
+        "success": true
+      }
+  }],
+  "created_at": "2016-02-29T15:24:21.052021+00:00",
+  "updated_at": "2016-02-29T15:24:25.976851+00:00",
+  "expires_at": "2016-02-29T15:29:21+00:00",
+  "used_at": null
+}
+```
+
+Attribute        | Type     | Description
+---------------- | -------- | -----------
+id               | string   | Unique identifier of the charge.
+charge_type      | string   | The payment [type](#charge-types)
+confirmed        | boolean  | Is the charge confirmed and can be used to create an instrument
+amount           | float    | The amount that will be charged
+currency         | string   | The currency of the charge
+events_url       | string   | The webhook URL to which all related events should be sent
+metadata         | url      | Metadata that the Merchant wishes to attach to the charge (e.g. order ID)
+instruments      | array    | Array of [Instruments](#instruments) (only one successful instrument per charge)
+created_at       | string   | Date and time of the creation of the charge.
+updated_at       | string   | Date and time of the last time the charge was updated
+expires_at       | string   | Date and time until when the charge is valid
+used_at          | string   | Date and time when the charge was used
+
+## Create a new charge
+
+A Charge is created by the Client using the Merchant's [public credentials](#public-credentials).
+
+### HTTP Request
+
+> Example Request
+
+```shell
+$ curl -vX POST "https://api.switchpayments.com/v2/charges" \
+       -u "username:password" \
+       -d '{"charge_type": "sofort", "amount": 42, "currency": "EUR", "metadata": {"orderId": "1337"}}'
+```
+
+`POST https://api.switchpayments.com/v2/charges`
+
+### Request Parameters
+
+Parameter   | Required | Description
+----------- | -------- | -----------
+charge_type | yes      | The type of payment
+amount      | yes      | The amount that will be charged when creating the payment
+currency    | yes      | The currency of the amount being charged
+metadata    | yes      | A JSON object containing metadata that will allow the merchant to link the charge with, for example, an order
+
+
+### Returns
+
+If the request succeeded, then `HTTP 201` is returned, meaning that the charge was created, with the respective [object](#charges). If something goes wrong, an [error](#errors) is returned.
+
+## Confirm a charge
+
+In order for a Charge to be used to create an [Instrument](#instruments), it has to be confirmed by the Merchant using its [private credentials](#private-credentials).
+
+### HTTP Request
+
+> Example Request
+
+```shell
+$ curl -vX POST "https://api.switchpayments.com/v2/charges/8135032a4dc488116a25dcca63b251af727dcca6549ee2a2/confirm" \
+       -u "username:password" \
+       -d '{}'
+```
+
+`POST https://api.switchpayments.com/v2/charges/{id}/confirm`
+
+### Returns
+
+If the request succeeded, then `HTTP 201` is returned. If something goes wrong, an [error](#errors) is returned.
+
+## List all charges
+
+List the Merchant's charges using it's [private credentials](#private-credentials).
+
+### HTTP Request
+
+> Example Request
+
+```shell
+$ curl -vX GET "https://api.switchpayments.com/v2/charges" \
+       -u "username:password"
+```
+
+`GET https://api.switchpayments.com/v2/charges`
+
+## Charge Types
+
+List the charge types available for the Merchant using it's [public credentials](#public-credentials).
+
+For each of the available charge types, additional information is provided such as if it is possible to make recurring payments
+and the schema of the required and optional parameters when creating a new instrument.
+
+### HTTP Request
+
+> Example Object
+
+```json
+{
+  "collection": [
+    {
+      "label": "Referência Multibanco",
+      "recurring": false,
+      "id": "multibanco",
+      "schema": {
+        "required:": [],
+        "type": "object",
+        "properties": {
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "label": "MBWay",
+      "recurring": false,
+      "id": "mbway",
+      "schema": {
+        "required": [
+          "phone"
+        ],
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "label": "PayPal",
+      "recurring": false,
+      "id": "paypal",
+      "schema": null
+    }
+  ]
+}
+```
+
+`GET https://api.switchpayments.com/v2/charges/types`
+
+# Instruments
+
+### The instrument object
+
+> Example Object
+
+```json
+{
+  "id": "5bdd065237b6b17162d1eb49331b4567825da91156d4ee16",
+  "success": true,
+  "redirect": {
+    "url": null,
+    "parameters": {
+      "reference": "000",
+      "value": "00"
+    }
+  },
+  "params": {
+    "phone": "910000000"
+  },
+  "used": false,
+  "last_payment": null,
+  "customer": null,
+  "charge": {
+    "charge_type": "mbway",
+    "id": "77f372c7e3e04c4cd4a2b4c036c7e05a4b17662956d4ed0d"
+  },
+  "created_at": "2016-03-01T01:19:18.822445+00:00",
+  "updated_at": "2016-03-01T01:19:18.822494+00:00"
+}
+```
+
+Attribute        | Type     | Description
+---------------- | -------- | -----------
+id               | string   | The unique ID of the instrument
+success          | string   | If the instrument was created successfully and can be used to create payments
+
+## Create a new instrument
+
+After a [Charge](#charges) created by the Client is confirmed by the Merchant, it is possible for the Client to create a
+Payment Instrument that will be used to create single or recurring payments.
+
+### HTTP Request
+
+> Example Request
+
+```shell
+$ curl -vX POST "https://api.switchpayments.com/v2/instruments" \
+       -d '{"charge": "06d7c2e4145f3be209e9ab5c6ed24da8b786f65256d462a5"}'
+```
+
+`POST https://api.switchpayments.com/v2/instruments`
+
+### Request Parameters
+
+Parameter   | Required | Description
+----------- | -------- | -----------
+charge      | yes      | The ID of the charge
+
+### Instrument Details
+
+Additional parameters may be required, according to the [charge type](#charge-types).
+
+### Returns
+
+If the request succeeded, then `HTTP 201` is returned, meaning that the instrument was created, with the respective [object](#instruments). If something goes wrong, an [error](#errors) is returned.
+
+## Archive an instrument
+
+When an instrument is no longer required, it should be archived. For example, if the charge type is a Card Authorization,
+archiving the instrument will also make sure the authorization is voided and the respective funds released.
+
+### HTTP Request
+
+> Example Request
+
+```shell
+$ curl -vX DELETE "https://api.switchpayments.com/v2/instruments/06d7c2e4145f3be209e9ab5c6ed24da8b786f65256d462a5"
+```
+
+`DELETE https://api.switchpayments.com/v2/instruments/{id}`
+
+
+### Returns
+
+If the request succeeded, then `HTTP 204` is returned, meaning that the instrument was archived. If something goes wrong, an [error](#errors) is returned.
 
 # Payments
 
@@ -135,60 +404,44 @@ Your credentials should NEVER be shared as they unlock sensitive resources, such
 
 ```json
 {
-    "id": "5affd688507a7ed35fac7c324862fdcc7d55099e549ee32f",
-    "amount": 100,
-    "amount_captured": 80,
-    "amount_refunded": 0,
-    "capture_on_creation": false,
-    "captured": true,
-    "captures": [
-      {
-        "amount": 80,
-        "created_at": "2014-12-28 15:14:13",
-        "success": false
-      },
-      {
-        "amount": 80,
-        "created_at": "2014-12-28 15:14:15",
-        "success": true
-      }
-    ],
-    "card": {
-        "cvc": "007",
-        "expiration_month": 3,
-        "expiration_year": 2016,
-        "name": "John Doe",
-        "number": "1111222233334444"
-    },
-    "created_at": "2014-12-27 16:49:51",
-    "currency": "EUR",
-    "description": "",
-    "refunds": [],
-    "success": true,
-    "updated_at": "2014-12-27 16:49:51",
-    "voided": false,
-    "voids": []
+  "id": "323c4771dc518d79cae787bb2c5963474bb441ab56d4ddc8",
+  "success": true,
+  "amount": 1,
+  "currency": "EUR",
+  "description": "",
+  "charge": {
+    "charge_type": "card_recurring",
+    "charge_type_label": "Card Recurring",
+    "id": "7569ac2f4e4ab8e3bdpb96196b3798d60e75e47b56d4610a"
+  },
+  "instrument": {
+    "id": "d8a2d0abb9fx972aea201fd805366dda6b83671b56d46112"
+  },
+  "refunds": [
+    {
+      "created_at": "2016-03-01T00:26:36.059632+00:00",
+      "amount": 1,
+      "description": "",
+      "success": true
+    }
+  ],
+  "created_at": "2016-03-01T00:09:46.729628+00:00",
+  "updated_at": "2016-03-01T00:09:46.729672+00:00"
 }
 ```
 
 Attribute           | Type     | Description
 ------------------- | -------- | -----------
 id                  | string   | Unique identifier of the payment.
-amount              | float    | Requested payment amount.
-amount_captured     | float    | Amount captured.
-amount_refunded     | float    | Amount refunded.
-capture_on_creation | boolean  | If 'false', then payment will be an authorization that will have to be either captured or voided.
-captured            | boolean  | Whether or not the payment was captured.
-captures            | array    | Capture requests for given payment.
-card                | object   | If 'capture_on_creation' is 'true', then this must be a valid Card ID string. If not, then payment is an authorization and the card's details, including CVC, are required and a dict containg them is expected.
-created_at          | string   | Date and time of the creation of the payment.
+success             | boolean  | Whether or not the payment was successful.
+amount              | float    | Amount captured.
 currency            | string   | Currency in which the payment was made.
 description         | string   | Description of the payment.
+charge              | object   | Details of the charge associated with the payment.
+instrument          | object   | Details of the instrument used to create the payment.
 refunds             | array    | Refunds made for this payment.
-success             | boolean  | Whether or not the payment (either process payment or authorization) were successful.
+created_at          | string   | Date and time of the creation of the payment.
 updated_at          | string   | Date and time of the last time an update was made to the payment.
-voided              | boolean  | In the case of payment being an Authorization, whether or not it was voided.
-voids               | array    | Voids requested for this payment.
 
 ## Create a new payment
 
@@ -197,84 +450,25 @@ voids               | array    | Voids requested for this payment.
 > Example Request
 
 ```shell
-$ curl -vX POST "https://api.switchpayments.com/v1/payments" \
+$ curl -vX POST "https://api.switchpayments.com/v2/payments" \
        -u "username:password" \
-       -d '{"amount": 42, "capture_on_creation": true, "currency": "EUR", "card": "8135032a4dc488116a25dcca63b251af727dcca6549ee2a2"}'
+       -d '{"instrument": "d8a2d0abb9fx972aea201fd805366dda6b83671b56d46112", "amount": 42, "currency": "EUR"}'
 ```
 
-`POST https://api.switchpayments.com/v1/payments`
+`POST https://api.switchpayments.com/v2/payments`
 
 ### Request Parameters
 
 Parameter           | Type     | Required | Description
 ------------------- | -------- | -------- | -----------
+instrument          | string   | yes      | The ID of the payment instrument.
 amount              | float    | yes      | A positive integer in the smallest currency unit.
-capture_on_creation | boolean  | yes      | If 'true' then payment is immediately captured and if 'false' then an Authorization is requested. 
-card                |          | no       | Either the ID of an existing card or a [dictionary](#create-a-new-card) containing a credit card's details, depending on 'capture_on_creation' being 'true' and 'false', respectively.
 currency            | string   | yes      | Three-letter ISO currency code representing the currency in which the payment should be made.
 description         | string   | no       | A description of the payment.
 
 ### Returns
 
 If the request succeeded, then `HTTP 201` is returned, meaning that the payment was created, with the respective [object](#payments). If something goes wrong, an [error](#errors) is returned.
-
-<aside class="warning">
-Payments created with 'capture_on_creation' as false will request an Authorization. Authorized payments should be captured or voided in 7 days.
-</aside>
-
-## Capture a payment
-
-You can only capture a payment that has an _active_ authorization.
-
-### HTTP Request
-
-> Example Request
-
-```shell
-$ curl -vX POST "https://api.switchpayments.com/v1/payments/cd501d5d9a68fea10f2926562c0593c24634d68854ad4e64/capture" \
-       -u "username:password" \
-       -d '{"amount": 40}'
-```
-
-`POST https://api.switchpayments.com/v1/payments/{id}/capture`
-
-### Request Parameters
-
-Parameter | Required | Description
---------- | -------- | -----------
-amount    | yes      | The amount to be captured (must be equal or less of the payment's total).
-
-### Returns
-
-If the request succeeded, then `HTTP 201` is returned. If something goes wrong, an [error](#errors) is returned.
-
-<aside class="notice">
-Captured is only possible on Authorized Payments (i.e. payments with the 'capture_on_creation' flag set as false).
-</aside>
-
-## Void a payment
-
-You can only void a payment that has an _active_ authorization.
-
-### HTTP Request
-
-> Example Request
-
-```shell
-$ curl -vX POST "https://api.switchpayments.com/v1/payments/cd501d5d9a68fea10f2926562c0593c24634d68854ad4e64/void" \
-       -u "username:password" \
-       -d '{}'
-```
-
-`POST https://api.switchpayments.com/v1/payments/{id}/void`
-
-### Returns
-
-If the request succeeded, then `HTTP 201` is returned. If something goes wrong, an [error](#errors) is returned.
-
-<aside class="notice">
-Void is only possible on Authorized Payments (i.e. payments with the 'capture_on_creation' flag set as false).
-</aside>
 
 ## Refund a payment
 
@@ -285,12 +479,12 @@ You can only make refunds of a payment that has been _captured_ and until the to
 > Example Request
 
 ```shell
-$ curl -vX POST "https://api.switchpayments.com/v1/payments/cd501d5d9a68fea10f2926562c0593c24634d68854ad4e64/refund" \
+$ curl -vX POST "https://api.switchpayments.com/v2/payments/323c4771dc518d79cae787bb2c5963474bb441ab56d4ddc8/refund" \
        -u "username:password" \
        -d '{"amount": 40, "description": "Client did not like the product"}'
 ```
 
-`POST https://api.switchpayments.com/v1/payments/{id}/refund`
+`POST https://api.switchpayments.com/v2/payments/{id}/refund`
 
 ### Request Parameters
 
@@ -310,116 +504,11 @@ If the request succeeded, then `HTTP 201` is returned. If something goes wrong, 
 > Example Request
 
 ```shell
-$ curl -vX GET "https://api.switchpayments.com/v1/payments" \
+$ curl -vX GET "https://api.switchpayments.com/v2/payments" \
        -u "username:password"
 ```
 
-`GET https://api.switchpayments.com/v1/payments`
-
-# Cards
-
-### The card object
-
-> Example Object
-
-```json
-{
-    "id": "8135032a4dc488116a25dcca63b251af727dcca6549ee2a2",
-    "brand": "visa",
-    "country": "portugal",
-    "created_at": "2014-12-27 16:47:30",
-    "expiration_month": 12,
-    "expiration_year": 2042,
-    "funding": "credit",
-    "last_4_digits": "0022",
-    "name": "John Doe"
-}
-```
-
-Attribute        | Type     | Description
----------------- | -------- | -----------
-id               | string   | Unique identifier of the card.
-brand            | string   | Card brand.
-country          | string   | The country the user was when this card was created.
-created_at       | string   | Date and time of the creation of the card.
-expiration_month | int      | Card expiration month.
-expiration_year  | int      | Card expiration year.
-funding          | string   | Card funding type.
-last_4_digits    | string   | Last four digits of the card number.
-name             | string   | Cardholder name.
-
-## Create a new card
-
-### HTTP Request
-
-> Example Request
-
-```shell
-$ curl -vX POST "https://api.switchpayments.com/v1/cards" \
-       -u "username:password" \
-       -d '{"card": "4360eeff94bda5bf0040cd9b907cbadc1008e36154ad319f"}'
-```
-
-`POST https://api.switchpayments.com/v1/cards`
-
-### Request Parameters
-
-Parameter | Required | Description
---------- | -------- | -----------
-card      | yes      | Can be a [token](#create-a-new-token) or a dictionary containing a credit card's details (see bellow).
-
-### Credit Card Details
-
-Parameter        | Required | Description
----------------- | -------- | -----------
-country          | yes      | The country where the user was when the card was created.
-customer_id      | no       | The ID of an existing [customer](#customers). If this value is provided, the card's owner will be the given customer.
-cvc              | yes      | The card's security code.
-expiration_month | yes      | The card's expiration month.
-expiration_year  | yes      | The card's expiration year.
-name             | yes      | The cardholder name.
-number           | yes      | The card's number.
-
-### Returns
-
-If the request succeeded, then `HTTP 201` is returned, meaning that the card was created, with the respective [object](#cards). If something goes wrong, an [error](#errors) is returned.
-
-## Update a card
-
-### HTTP Request
-
-> Example Request
-
-```shell
-$ curl -vX PUT "https://api.switchpayments.com/v1/cards/8135032a4dc488116a25dcca63b251af727dcca6549ee2a2" \
-       -u "username:password" \
-       -d '{"customer_id": "ef40a7a20144b23b3b82a82f86e3005e0fb6e07654ad265e"}'
-```
-
-`PUT https://api.switchpayments.com/v1/cards/{id}`
-
-### Request Parameters
-
-Parameter   | Required | Description
------------ | -------- | -----------
-customer_id | yes      | The ID of an existing [customer](#customers). If this value is provided, the card's owner will be the given customer. If the value is empty, then the card will have no customer associated with it.
-
-### Returns
-
-If the request succeeded, then `HTTP 200` is returned. If something goes wrong, an [error](#errors) is returned.
-
-## List all cards
-
-### HTTP Request
-
-> Example Request
-
-```shell
-$ curl -vX GET "https://api.switchpayments.com/v1/cards" \
-       -u "username:password"
-```
-
-`GET https://api.switchpayments.com/v1/cards`
+`GET https://api.switchpayments.com/v2/payments`
 
 # Customers
 
@@ -429,29 +518,23 @@ $ curl -vX GET "https://api.switchpayments.com/v1/cards" \
 
 ```json
 {
-    "id": "ef40a7a20144b23b3b82a82f86e3005e0fb6e07654ad265e",
-    "description": "The best client in the world!",
-    "created_at": "2015-01-07 12:28:14",
-    "updated_at": "2015-01-07 12:28:14",
-    "email": "john@example.com",
-    "cards": {
-        "url": "/v1/customers/ef40a7a20144b23b3b82a82f86e3005e0fb6e07654ad265e/cards",
-        "total_items": 0,
-        "default": null
-    },
-    "name": "John Doe"
+  "id": "ef40a7a20144b23b3b82a82f86e3005e0fb6e07654ad265e",
+  "name": "John Doe",
+  "email": "john@example.com",
+  "description": "The best client in the world!",
+  "created_at": "2015-01-07 12:28:14",
+  "updated_at": "2015-01-07 12:28:14"
 }
 ```
 
 Attribute        | Type     | Description
 ---------------- | -------- | -----------
 id               | string   | Unique identifier of the customer.
-email            | string   | The customer's email address.
 name             | string   | The customer's full name.
+email            | string   | The customer's email address.
 description      | string   | A description about the customer.
 created_at       | string   | Date and time of the creation of the customer.
 updated_at       | string   | Date and time of the last update to the customer's details.
-cards            | object   | A dictionary with a detailed summary regarding customer's cards (e.g. total cards, default card) and the URL to the respective resource collection.
 
 ## Create a new customer
 
@@ -460,12 +543,12 @@ cards            | object   | A dictionary with a detailed summary regarding cus
 > Example Request
 
 ```shell
-$ curl -vX POST "https://api.switchpayments.com/v1/customers" \
+$ curl -vX POST "https://api.switchpayments.com/v2/customers" \
        -u "username:password" \
        -d '{"email": "john@example.com", "name": "John Doe", "description": "The best client in the world!"}'
 ```
 
-`POST https://api.switchpayments.com/v1/customers`
+`POST https://api.switchpayments.com/v2/customers`
 
 ### Request Parameters
 
@@ -477,7 +560,7 @@ description | no       | A description of the customer.
 
 ### Returns
 
-If the request succeeded, then `HTTP 201` is returned, meaning that the card was created, with the respective [object](#customers). If something goes wrong, an [error](#errors) is returned.
+If the request succeeded, then `HTTP 201` is returned, meaning that the customer was created, with the respective [object](#customers). If something goes wrong, an [error](#errors) is returned.
 
 ## Update a customer
 
@@ -486,12 +569,12 @@ If the request succeeded, then `HTTP 201` is returned, meaning that the card was
 > Example Request
 
 ```shell
-$ curl -vX PUT "https://api.switchpayments.com/v1/customers/ef40a7a20144b23b3b82a82f86e3005e0fb6e07654ad265e" \
+$ curl -vX PUT "https://api.switchpayments.com/v2/customers/ef40a7a20144b23b3b82a82f86e3005e0fb6e07654ad265e" \
        -u "username:password" \
-       -d '{"default_card": "8135032a4dc488116a25dcca63b251af727dcca6549ee2a2"}'
+       -d '{"name": "John"}'
 ```
 
-`PUT https://api.switchpayments.com/v1/customers/{id}`
+`PUT https://api.switchpayments.com/v2/customers/{id}`
 
 ### Request Parameters
 
@@ -500,75 +583,87 @@ Parameter    | Required | Description
 email        | yes      | The customer's email address.
 name         | no       | The customer's full name.
 description  | no       | A description of the customer.
-default_card | no       | The ID of an existing [card](#cards) (should either don't have a customer of belong to the given customer) that will be set as the customer's default card.
 
 ### Returns
 
 If the request succeeded, then `HTTP 200` is returned. If something goes wrong, an [error](#errors) is returned.
 
-## List a customer's cards
+### Returns
 
-### HTTP Request
+If the request succeeded, then `HTTP 204` is returned, meaning that the instrument was archived. If something goes wrong, an [error](#errors) is returned.
 
-> Example Request
+# Events
 
-```shell
-$ curl -vX GET "https://api.switchpayments.com/v1/customers/ef40a7a20144b23b3b82a82f86e3005e0fb6e07654ad265e/cards" \
-       -u "username:password"
-```
-
-`GET https://api.switchpayments.com/v1/customers/{id}/cards`
-
-# Tokens
-
-### The token object
+### The event object
 
 > Example Object
 
 ```json
 {
-    "type": "card",
-    "value": "4360eeff94bda5bf0040cd9b907cbadc1008e36154ad319f"
+  "id": "5d59645e6f40da00230be601300920628d918a0856d4ee16",
+  "type": "instrument.success",
+  "result_status": -1,
+  "created_at": "2016-03-01T01:19:18.829914+00:00",
+  "instrument": {
+    "customer": null,
+    "used": false,
+    "updated_at": "2016-03-01T01:19:18.822494+00:00",
+    "id": "5bdd065237b6b17162d1eb49331b4567825da91156d4ee16",
+    "last_payment": null,
+    "redirect": {
+      "url": null,
+      "parameters": {
+        "reference": "000",
+        "value": "000"
+      }
+    },
+    "success": true,
+    "created_at": "2016-03-01T01:19:18.822445+00:00",
+    "charge": {
+      "charge_type": "mbway",
+      "charge_type_label": "MBWay",
+      "id": "77f372c7e3e04c4cd4a2b4c036c7e05a4b17662956d4ed0d"
+    },
+    "params": {
+      "phone": "910000000"
+    }
+  },
+  "charge": {
+    "events_url": "https://localhost:8001/default_awesome_webhook_url",
+    "updated_at": "2016-03-01T01:16:26.615584+00:00",
+    "expires_at": "2016-03-01T01:19:53+00:00",
+    "charge_type_label": "MBWay",
+    "used_at": null,
+    "id": "77f372c7e3e04c4cd4a2b4c036c7e05a4b17662956d4ed0d",
+    "charge_type": "mbway",
+    "confirmed": true,
+    "currency": "EUR",
+    "created_at": "2016-03-01T01:14:53.320743+00:00",
+    "amount": 42,
+    "metadata": {
+      "orderId": 1337
+    }
+  }
 }
 ```
 
-Attribute        | Type     | Description
----------------- | -------- | -----------
-type             | string   | The type of token.
-value            | string   | The token itself, that should be provided in any request that requires a token.
+Attribute           | Type     | Description
+------------------- | -------- | -----------
+id                  | string   | Unique identifier of the event.
+type                | string   | Code that specifies the type of event.
+result_status       | string   | The status of the call to the specified events webhook.
+charge              | object   | [Charge](#charges) object (for events related to Charges, Instruments and Payments).
+instrument          | object   | [Instrument](#instruments) object (for events related to Instruments and Payments).
+payment             | object   | [Payment](#payments) object (for events related to Payments).
 
-## Create a new token
+## List events
 
 ### HTTP Request
 
 > Example Request
 
 ```shell
-$ curl -vX POST "https://api.switchpayments.com/v1/tokens" \
-       -d '{"type": "card"}'
+$ curl -vX GET "https://api.switchpayments.com/v2/events"
 ```
 
-`POST https://api.switchpayments.com/v1/tokens`
-
-### Request Parameters
-
-Parameter   | Required | Description
------------ | -------- | -----------
-type        | yes      | The type of token (possible values: "card")
-
-### Credit Card Details
-
-If the token is of the **card** type, additional parameters must be provided with the request.
-
-Parameter        | Required | Description
----------------- | -------- | -----------
-country          | yes      | The country where the user was when the token was requested.
-cvc              | yes      | The card's security code.
-expiration_month | yes      | The card's expiration month.
-expiration_year  | yes      | The card's expiration year.
-name             | yes      | The cardholder name.
-number           | yes      | The card's number.
-
-### Returns
-
-If the request succeeded, then `HTTP 201` is returned, meaning that the card was created, with the respective [object](#tokens). If something goes wrong, an [error](#errors) is returned.
+`GET https://api.switchpayments.com/v2/events`
